@@ -30,7 +30,7 @@ st.markdown("---")
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).resize((150, 150))
-    st.image(image, caption="📷 Uploaded Image", use_column_width=False, width=200)
+    st.image(image, caption="📷 Uploaded Image", use_container_width=True, width=200)
 
     try:
         # Preprocess image
@@ -40,7 +40,7 @@ if uploaded_file is not None:
         # Load model
         model_path = "fruit_classifier_model.pkl"
         if not os.path.exists(model_path):
-            st.error("🚫 Model file not found. Please ensure 'fruit_classifier_model.pkl' is in the directory.")
+            st.error("🚫 Model file not found. Please upload 'fruit_classifier_model.pkl' to this app directory.")
         else:
             with open(model_path, "rb") as f:
                 model = pickle.load(f)
@@ -51,7 +51,7 @@ if uploaded_file is not None:
             predicted_class = classes[np.argmax(prediction)]
             confidence = np.max(prediction) * 100
 
-            # Result with badge
+            # Show result
             if predicted_class == "Apple":
                 st.success(f"🍎 It's an **Apple** with **{confidence:.2f}%** confidence!")
             else:
