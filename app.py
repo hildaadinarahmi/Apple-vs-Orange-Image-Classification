@@ -1,8 +1,8 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
+import torch
 import pickle
-import os
 
 # App config
 st.set_page_config(page_title="Fruit Classifier", page_icon="🍎", layout="centered")
@@ -22,51 +22,49 @@ with col2:
     st.markdown("### 📝 How it works")
     st.markdown("""
     - Trained on basic visual features like **color** and **shape**.
-    - Preprocessed to 150x150 pixels.
-    - Uses a simple image classifier model (pickle).
+    - Preprocessed to 128x128 pixels.
+    - Uses a simple image classifier model (PyTorch + Pickle).
     """)
 
 st.markdown("---")
 
+# Load model safely
+@st.cache_resource
+def load_model():
+    try:
+        with open("fruit_classifier_model.pkl", "rb") as f:
+            wrapper = pickle.load(f)
+            return wrapper.model.eval(), wrapper.class_names
+    except FileNotFoundError:
+        st.error("🚫 Model file not found. Please ensure 'fruit_classifier_model.pkl' is in the directory.")
+        st.stop()
+
+model, class_names = load_model()
+
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).resize((150, 150))
-    st.image(image, caption="📷 Uploaded Image", use_container_width=True, width=200)
+    image = Image.open(uploaded_file).resize((128, 128))
+    st.image(image, caption="📷 Uploaded Image", use_container_width=True)
 
     try:
-        # Preprocess image
+        # Preprocess image for PyTorch
         img_array = np.array(image) / 255.0
-        img_batch = np.expand_dims(img_array, axis=0)
+        if img_array.shape[2] == 4:  # Remove alpha channel if present
+            img_array = img_array[:, :, :3]
+        img_tensor = torch.tensor(img_array.transpose(2, 0, 1)).unsqueeze(0).float()
+        img_tensor = img_tensor * 2 - 1  # normalize to [-1, 1]
 
-        # Load model
-try:
-    with open("fruit_classifier_model.pkl", "rb") as f:
-        wrapper = pickle.load(f)
-        model = wrapper.model
-        class_names = wrapper.class_names
-except FileNotFoundError:
-    st.error("🚫 Model file not found. Please ensure 'fruit_classifier_model.pkl' is in the directory.")
-    st.stop()
+        # Predict
+        with torch.no_grad():
+            output = model(img_tensor)
+            pred_idx = torch.argmax(output, dim=1).item()
+            predicted_class = class_names[pred_idx]
+            confidence = torch.softmax(output, dim=1)[0][pred_idx].item() * 100
 
-            # Predict
-            prediction = model.predict(img_batch)[0]
-            classes = ["Apple", "Orange"]
-            predicted_class = classes[np.argmax(prediction)]
-            confidence = np.max(prediction) * 100
-
-            # Show result
-            if predicted_class == "Apple":
-                st.success(f"🍎 It's an **Apple** with **{confidence:.2f}%** confidence!")
-            else:
-                st.warning(f"🍊 It's an **Orange** with **{confidence:.2f}%** confidence!")
+        # Show result
+        if predicted_class.lower() == "apple":
+            st.success(f"🍎 It's an **Apple** with **{confidence:.2f}%** confidence!")
+        else:
+            st.warning(f"🍊 It's an **Orange** with **{confidence:.2f}%** confidence!")
 
     except Exception as e:
-        st.error(f"An error occurred during prediction: {e}")
-
-# Tensor image (normalize & resize done in Streamlit)
-import torch
-img_tensor = torch.tensor(img_array.transpose(2, 0, 1)).unsqueeze(0).float()
-img_tensor = img_tensor * 2 - 1  # normalize back to [-1, 1]
-with torch.no_grad():
-    output = model(img_tensor)
-    predicted_class = class_names[output.argmax().item()]
-
+        st.error(f"❌ An error occurred during prediction: {e}")
