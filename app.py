@@ -38,12 +38,10 @@ if uploaded_file is not None:
         img_batch = np.expand_dims(img_array, axis=0)
 
         # Load model
-        model_path = "fruit_classifier_model.pkl"
-        if not os.path.exists(model_path):
-            st.error("🚫 Model file not found. Please upload 'fruit_classifier_model.pkl' to this app directory.")
-        else:
-            with open(model_path, "rb") as f:
-                model = pickle.load(f)
+with open("fruit_classifier_model.pkl", "rb") as f:
+    wrapper = pickle.load(f)
+    model = wrapper.model
+    class_names = wrapper.class_names
 
             # Predict
             prediction = model.predict(img_batch)[0]
@@ -59,3 +57,12 @@ if uploaded_file is not None:
 
     except Exception as e:
         st.error(f"An error occurred during prediction: {e}")
+
+# Tensor image (normalize & resize done in Streamlit)
+import torch
+img_tensor = torch.tensor(img_array.transpose(2, 0, 1)).unsqueeze(0).float()
+img_tensor = img_tensor * 2 - 1  # normalize back to [-1, 1]
+with torch.no_grad():
+    output = model(img_tensor)
+    predicted_class = class_names[output.argmax().item()]
+
