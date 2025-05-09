@@ -38,10 +38,14 @@ if uploaded_file is not None:
         img_batch = np.expand_dims(img_array, axis=0)
 
         # Load model
-with open("fruit_classifier_model.pkl", "rb") as f:
-    wrapper = pickle.load(f)
-    model = wrapper.model
-    class_names = wrapper.class_names
+try:
+    with open("fruit_classifier_model.pkl", "rb") as f:
+        wrapper = pickle.load(f)
+        model = wrapper.model
+        class_names = wrapper.class_names
+except FileNotFoundError:
+    st.error("🚫 Model file not found. Please ensure 'fruit_classifier_model.pkl' is in the directory.")
+    st.stop()
 
             # Predict
             prediction = model.predict(img_batch)[0]
