@@ -1,38 +1,61 @@
-
 import streamlit as st
 from PIL import Image
 import numpy as np
 import pickle
+import os
 
-st.title("🍎 Fruit Classifier: Apple vs Orange")
-st.write("""
-This interactive app uses a simple image classifier to predict whether the uploaded fruit image is an **apple** or an **orange**.
-""")
+# App config
+st.set_page_config(page_title="Fruit Classifier", page_icon="🍎", layout="centered")
 
-uploaded_file = st.file_uploader("Upload a fruit image...", type=["jpg", "jpeg", "png"])
+# Custom header
+st.markdown("<h1 style='text-align: center;'>🍎🍊 Fruit Classifier: Apple vs Orange</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Upload an image, and let the model predict whether it's an <b>Apple</b> or an <b>Orange</b>.</p>", unsafe_allow_html=True)
+st.markdown("---")
+
+# Layout using columns
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    uploaded_file = st.file_uploader("📤 Upload your fruit image", type=["jpg", "jpeg", "png"])
+    
+with col2:
+    st.markdown("### 📝 How it works")
+    st.markdown("""
+    - Trained on basic visual features like **color** and **shape**.
+    - Preprocessed to 150x150 pixels.
+    - Uses a simple image classifier model (pickle).
+    """)
+
+st.markdown("---")
+
 if uploaded_file is not None:
     image = Image.open(uploaded_file).resize((150, 150))
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.image(image, caption="📷 Uploaded Image", use_column_width=False, width=200)
 
-    # Preprocess image
-    img_array = np.array(image) / 255.0
-    img_batch = np.expand_dims(img_array, axis=0)
+    try:
+        # Preprocess image
+        img_array = np.array(image) / 255.0
+        img_batch = np.expand_dims(img_array, axis=0)
 
-    # Load model
-    with open("fruit_classifier_model.pkl", "rb") as f:
-        model = pickle.load(f)
+        # Load model
+        model_path = "fruit_classifier_model.pkl"
+        if not os.path.exists(model_path):
+            st.error("🚫 Model file not found. Please ensure 'fruit_classifier_model.pkl' is in the directory.")
+        else:
+            with open(model_path, "rb") as f:
+                model = pickle.load(f)
 
-    # Predict
-    prediction = model.predict(img_batch)[0]
-    classes = ["Apple", "Orange"]
-    predicted_class = classes[np.argmax(prediction)]
-    confidence = np.max(prediction) * 100
+            # Predict
+            prediction = model.predict(img_batch)[0]
+            classes = ["Apple", "Orange"]
+            predicted_class = classes[np.argmax(prediction)]
+            confidence = np.max(prediction) * 100
 
-    st.success(f"Prediction: **{predicted_class}** with **{confidence:.2f}%** confidence.")
+            # Result with badge
+            if predicted_class == "Apple":
+                st.success(f"🍎 It's an **Apple** with **{confidence:.2f}%** confidence!")
+            else:
+                st.warning(f"🍊 It's an **Orange** with **{confidence:.2f}%** confidence!")
 
-with st.expander("How does this work?"):
-    st.markdown("""
-    This model is trained using a basic image classification pipeline. It uses visual features like shape and color to distinguish between apples and oranges.
-    
-    Try uploading different images to test it out!
-    """)
+    except Exception as e:
+        st.error(f"An error occurred during prediction: {e}")
