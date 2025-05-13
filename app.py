@@ -38,6 +38,10 @@ def load_model():
     except FileNotFoundError:
         st.error("🚫 Model file not found. Please ensure 'fruit_classifier_model.pkl' is in the directory.")
         st.stop()
+class ModelWrapper:
+    def __init__(self, model, class_names):
+        self.model = model
+        self.class_names = class_names
 
 model, class_names = load_model()
 
