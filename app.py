@@ -28,7 +28,6 @@ class SimpleCNN(nn.Module):
         x = self.classifier(x)
         return x
 
-# Harus sama seperti yang digunakan saat menyimpan
 class ModelWrapper:
     def __init__(self, model, class_names):
         self.model = model
@@ -47,7 +46,8 @@ def build_model():
         nn.ReLU(),
         nn.Linear(64, 2)
     )
-    
+
+
 # App config
 st.set_page_config(page_title="Fruit Classifier", page_icon="🍎", layout="centered")
 
@@ -70,11 +70,15 @@ with col2:
 
 st.markdown("---")
 
+model = SimpleCNN()
+class_names = ["Apple", "Orange"]
+wrapper = ModelWrapper(model, class_names)
+
 @st.cache_resource
 def load_model():
     try:
-        with open("fruit_classifier_model.pkl", "rb") as f:
-            wrapper = pickle.load(f)
+        with open("fruit_classifier_model.pkl", "wb") as f:
+    pickle.dump(wrapper, f)
             return wrapper.model.eval(), wrapper.class_names
     except FileNotFoundError:
         st.error("🚫 Model file not found.")
