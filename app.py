@@ -4,42 +4,34 @@ import numpy as np
 import torch
 import pickle
 import torch.nn as nn
-import torch
 
-class_names = ['Apple', 'Orange']
-
-model = nn.Sequential(
-    nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
-    nn.ReLU(),
-    nn.MaxPool2d(2),
-    nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
-    nn.ReLU(),
-    nn.MaxPool2d(2),
-    nn.Flatten(),
-    nn.Linear(32 * 32 * 32, 64),
-    nn.ReLU(),
-    nn.Linear(64, 2)
-)
-
+# Harus sama seperti yang digunakan saat menyimpan
 class ModelWrapper:
     def __init__(self, model, class_names):
         self.model = model
         self.class_names = class_names
 
-wrapper = ModelWrapper(model, class_names)
-
-with open("fruit_classifier_model.pkl", "wb") as f:
-    pickle.dump(wrapper, f)
+def build_model():
+    return nn.Sequential(
+        nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+        nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+        nn.Flatten(),
+        nn.Linear(32 * 32 * 32, 64),
+        nn.ReLU(),
+        nn.Linear(64, 2)
+    )
 
 # App config
 st.set_page_config(page_title="Fruit Classifier", page_icon="🍎", layout="centered")
 
-# Custom header
 st.markdown("<h1 style='text-align: center;'>🍎🍊 Fruit Classifier: Apple vs Orange</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>Upload an image, and let the model predict whether it's an <b>Apple</b> or an <b>Orange</b>.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Layout using columns
 col1, col2 = st.columns([1, 2])
 
 with col1:
@@ -55,31 +47,28 @@ with col2:
 
 st.markdown("---")
 
-# Load model safely
 @st.cache_resource
 def load_model():
     try:
         with open("fruit_classifier_model.pkl", "rb") as f:
             wrapper = pickle.load(f)
             return wrapper.model.eval(), wrapper.class_names
-    except FileNotFoundError:
-        st.error("🚫 Model file not found. Please ensure 'fruit_classifier_model.pkl' is in the directory.")
+    except Exception as e:
+        st.error(f"🚫 Failed to load model: {e}")
         st.stop()
 
-# ✅ load_model dipanggil setelah class didefinisikan
 model, class_names = load_model()
 
-# Image processing and prediction
 if uploaded_file is not None:
     image = Image.open(uploaded_file).resize((128, 128))
     st.image(image, caption="📷 Uploaded Image", use_container_width=True)
 
     try:
         img_array = np.array(image) / 255.0
-        if img_array.shape[2] == 4:  # Remove alpha channel if present
+        if img_array.shape[2] == 4:
             img_array = img_array[:, :, :3]
         img_tensor = torch.tensor(img_array.transpose(2, 0, 1)).unsqueeze(0).float()
-        img_tensor = img_tensor * 2 - 1  # normalize to [-1, 1]
+        img_tensor = img_tensor * 2 - 1
 
         with torch.no_grad():
             output = model(img_tensor)
@@ -93,4 +82,4 @@ if uploaded_file is not None:
             st.warning(f"🍊 It's an **Orange** with **{confidence:.2f}%** confidence!")
 
     except Exception as e:
-        st.error(f"❌ An error occurred during prediction: {e}")
+        st.error(f"❌ Error during prediction: {e}")
