@@ -33,20 +33,18 @@ class ModelWrapper:
         self.model = model
         self.class_names = class_names
 
-def build_model():
-    return nn.Sequential(
-        nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
-        nn.ReLU(),
-        nn.MaxPool2d(2),
-        nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
-        nn.ReLU(),
-        nn.MaxPool2d(2),
-        nn.Flatten(),
-        nn.Linear(32 * 32 * 32, 64),
-        nn.ReLU(),
-        nn.Linear(64, 2)
-    )
-
+@st.cache_resource
+def load_model():
+    try:
+        with open("fruit_classifier_model.pkl", "rb") as f:  # Open in read-binary mode
+            wrapper = pickle.load(f)  # Load the model from the file
+            return wrapper.model.eval(), wrapper.class_names
+    except FileNotFoundError:
+        st.error("🚫 Model file not found.")
+        st.stop()
+    except Exception as e:
+        st.error(f"❌ Error loading model: {e}")
+        st.stop()
 
 # App config
 st.set_page_config(page_title="Fruit Classifier", page_icon="🍎", layout="centered")
@@ -70,20 +68,6 @@ with col2:
 
 st.markdown("---")
 
-model = SimpleCNN()
-class_names = ["Apple", "Orange"]
-wrapper = ModelWrapper(model, class_names)
-
-@st.cache_resource
-def load_model():
-    try:
-        with open("fruit_classifier_model.pkl", "wb") as f:
-    pickle.dump(wrapper, f)
-            return wrapper.model.eval(), wrapper.class_names
-    except FileNotFoundError:
-        st.error("🚫 Model file not found.")
-        st.stop()
-
 model, class_names = load_model()
 
 if uploaded_file is not None:
@@ -92,10 +76,10 @@ if uploaded_file is not None:
 
     try:
         img_array = np.array(image) / 255.0
-        if img_array.shape[2] == 4:
+        if img_array.shape[2] == 4:  # Handle RGBA images
             img_array = img_array[:, :, :3]
         img_tensor = torch.tensor(img_array.transpose(2, 0, 1)).unsqueeze(0).float()
-        img_tensor = img_tensor * 2 - 1
+        img_tensor = img_tensor * 2 - 1  # Normalize to [-1, 1]
 
         with torch.no_grad():
             output = model(img_tensor)
