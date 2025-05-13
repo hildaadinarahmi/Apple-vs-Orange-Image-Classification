@@ -24,7 +24,30 @@ def build_model():
         nn.ReLU(),
         nn.Linear(64, 2)
     )
+    
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super(SimpleCNN, self).__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 16, 3, 1, 1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(16, 32, 3, 1, 1),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(32 * 32 * 32, 64),
+            nn.ReLU(),
+            nn.Linear(64, 2)
+        )
 
+    def forward(self, x):
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
+        
 # App config
 st.set_page_config(page_title="Fruit Classifier", page_icon="🍎", layout="centered")
 
